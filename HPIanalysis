@@ -1,0 +1,140 @@
+#Script Arima model 
+view(Official_Ottawa_data)
+str(Official_Ottawa_data)
+
+#plot the data and change it to time series
+Ottawa<-ts(Official_Ottawa_data,frequency = 12,start = c(1981,1))
+Ottawa
+plot<-autoplot(Ottawa)
+Ottawa %>% ggtsdisplay 
+
+#First differenced data
+Ottawa %>% diff %>% ggtsdisplay()
+#stationary data test
+library(urca)
+Ottawa %>% ur.kpss() %>% summary()
+ndiffs(Ottawa)
+Ottawa %>% diff() %>% ur.kpss() %>% summary()
+nsdiffs(Ottawa)
+
+#Fit and select an ARIMA model 
+auto.arima(Ottawa, stepwise = FALSE, approximation = FALSE)
+fit.auto <- auto.arima(Ottawa,stepwise = FALSE, approximation = FALSE)
+
+#Check residuals 
+checkresiduals(fit.auto)
+Box.test(residuals(fit.auto))
+
+#forcast for 5 years months=60
+fcast <- forecast(fit.auto, h = 60)
+forecast(fit.auto, h = 60)
+autoplot(fcast)
+
+#data test and train set 
+data.train = window(Ottawa, end = c(2017,8))
+data.test = window(Ottawa, start = c(2007,9))
+fcast_train <- auto.arima(data.train, stepwise = FALSE, approximation = FALSE)
+forecast.datatrain<-forecast(fcast_train, h = 23)
+autoplot(data.train)+ 
+  autolayer(forecast.datatrain)+ 
+  ggtitle("Housing price indexes for Ottawa, Canada - ARIMA")+
+  xlab ("Year")+
+  ylab("HPI Value")
+
+#accuracy test 
+accuracy(forecast.datatrain,data.test)
+checkresiduals(forecast.datatrain)
+
+
+
+
+
+
+
+
+#Script for Simple Exponential Smoothing Method
+library(fpp2)
+
+housing <- read_csv("C:/Users/justi/Downloads/OttawaHousing.csv")
+housing
+#reading data
+summary(housing)
+#Min.   : 30.80  
+#1st Qu.: 49.90  
+#Median : 54.15  
+#Mean   : 68.69  
+#3rd Qu.: 93.92  
+#Max.   :115.70 
+
+housingts = ts(housing, start = c(1981), frequency = 12)
+autoplot(housingts) + ylab("House Price Index") + xlab("Date") + ggtitle("Ottawa Housing Data")
+#regular plot of data showing increasing positive trend
+
+house.train = window(housingts, end=c(2017,8))
+house.test = window(housingts, start=c(2017,8))
+#training and test data
+fc <- ses(house.train, alpha = .85, h=23)
+autoplot(fc)
+summary(fc[["model"]])
+
+accuracy(fc, house.test)
+
+fc1 <- ses(housingts, alpha = .85, h = 60)
+autoplot(fc1) + ggtitle("5 Year Forecast from Simple Exponential Smoothing (SES)") + ylab("HPI Value")
+fc1
+
+
+
+
+
+
+
+#Script for Holt’s Linear Method
+#Imported data the same way as ARIMA script above.
+
+#import library
+library(fpp2)
+
+#turn object into time series
+housedata.ts <- ts(data=housedata, frequency = 12, start=c(1981,1), end=c(2019,8))
+
+#plot time series
+autoplot(housedata.ts) + ggtitle("Housing price indexes for Ottawa, Canada - 1981-2019") +
+  xlab("Year") +
+  ylab("HPI value")
+
+#graph 5 year forecast
+window(housedata.ts, start=c(1981,1)) %>% holt(h=60, PI=TRUE) %>% 
+  autoplot() +  
+  xlab("Year") +
+  ylab("HPI value")
+
+#store and print 5 year forecast
+fcast_5 <- holt(housedata.ts, h=60)
+fcast_5
+
+#residuals plot for 5 year forecast
+checkresiduals(fcast_5)
+
+#split data into training and test sets
+hdata.train = window(housedata.ts, end=c(2017,8))
+hdata.test = window(housedata.ts, start=c(2017,9))
+
+#forecast using training set
+fcast <- holt(hdata.train, h=23)
+
+#print training set forecast
+fcast
+
+#plot training set forecast
+autoplot(hdata.train) + autolayer(fcast) +
+  ggtitle("Housing price indexes for Ottawa, Canada - Holts") +
+  xlab("Year") +
+  ylab("HPI value")
+
+#accuracy measure for the training set forecast against test set
+accuracy(fcast,hdata.test)
+
+#residuals for the training set forecast
+checkresiduals(fcast)
+
